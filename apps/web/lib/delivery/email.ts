@@ -2,12 +2,24 @@ import { Resend } from "resend";
 import { format } from "date-fns";
 import type { DailyBrief } from "../types";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+  return new Resend(apiKey);
+}
 
 export async function sendBriefEmail(
   brief: DailyBrief,
   recipientEmail: string
 ): Promise<boolean> {
+  const resend = getResendClient();
+  if (!resend) {
+    console.error("Resend API key not configured");
+    return false;
+  }
+
   const html = renderBriefToHtml(brief);
   const dateStr = format(brief.date, "EEEE, MMMM d, yyyy");
 

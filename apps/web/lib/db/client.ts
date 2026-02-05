@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import Database from "better-sqlite3";
+import Database, { type Database as DatabaseType } from "better-sqlite3";
 import * as schema from "./schema";
 import { existsSync, mkdirSync } from "fs";
 import { dirname } from "path";
@@ -12,7 +12,7 @@ if (!existsSync(dir)) {
   mkdirSync(dir, { recursive: true });
 }
 
-const sqlite = new Database(dbPath);
+const sqlite: DatabaseType = new Database(dbPath);
 export const db = drizzle(sqlite, { schema });
 
 // Initialize tables

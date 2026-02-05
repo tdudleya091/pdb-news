@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { aggregateNews } from "@/lib/news/aggregator";
 import { getWeatherForecast } from "@/lib/weather/forecast";
 import { generateBrief } from "@/lib/ai/summarizer";
-import { saveBrief, logDelivery, updateDeliveredVia } from "@/lib/db/queries";
 import { sendBriefEmail } from "@/lib/delivery/email";
-import { sendBriefToDiscord, disconnectDiscord } from "@/lib/delivery/discord";
+import { sendBriefToDiscord } from "@/lib/delivery/discord";
 
 export const maxDuration = 300;
+
+// Dynamic import for database (may not be available on serverless)
+async function tryGetDbQueries() {
+  try {
+    return await import("@/lib/db/queries");
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -39,19 +47,33 @@ export async function GET(request: NextRequest) {
     const brief = await generateBrief(news, weather);
     console.log("Brief generated successfully");
 
-    const saved = await saveBrief({
-      date: brief.date,
-      weather: brief.weather,
-      executiveSummary: brief.executiveSummary,
-      sections: brief.sections,
-      rawNews: news,
-      generatedAt: brief.generatedAt,
-    });
-    results.briefId = saved.id;
+    // Try to save to database (optional)
+    let savedBrief = brief;
+    const db = await tryGetDbQueries();
+    if (db) {
+      try {
+        const saved = await db.saveBrief({
+          date: brief.date,
+          weather: brief.weather,
+          executiveSummary: brief.executiveSummary,
+          sections: brief.sections,
+          rawNews: news,
+          generatedAt: brief.generatedAt,
+        });
+        savedBrief = { ...brief, id: saved.id };
+        results.briefId = saved.id;
+        results.database = "saved";
+      } catch (dbError) {
+        console.warn("Failed to save to database:", dbError);
+        results.database = "unavailable";
+      }
+    } else {
+      results.database = "unavailable";
+    }
 
     const deliveryResults = await Promise.allSettled([
-      deliverEmail(saved.id, { ...brief, id: saved.id }),
-      deliverDiscord(saved.id, { ...brief, id: saved.id }),
+      deliverEmail(savedBrief, db),
+      deliverDiscord(savedBrief, db),
     ]);
 
     results.email =
@@ -63,13 +85,11 @@ export async function GET(request: NextRequest) {
         ? deliveryResults[1].value
         : "failed";
 
-    await disconnectDiscord();
-
     console.log("Daily brief completed:", results);
 
     return NextResponse.json({
       success: true,
-      briefId: saved.id,
+      briefId: results.briefId || brief.id,
       results,
     });
   } catch (error) {
@@ -86,8 +106,8 @@ export async function GET(request: NextRequest) {
 }
 
 async function deliverEmail(
-  briefId: string,
-  brief: Parameters<typeof sendBriefEmail>[0]
+  brief: Parameters<typeof sendBriefEmail>[0],
+  db: Awaited<ReturnType<typeof tryGetDbQueries>>
 ): Promise<string> {
   const userEmail = process.env.USER_EMAIL;
 
@@ -100,23 +120,29 @@ async function deliverEmail(
     const success = await sendBriefEmail(brief, userEmail);
 
     if (success) {
-      await logDelivery(briefId, "email", "sent");
-      await updateDeliveredVia(briefId, "email");
+      if (db && brief.id) {
+        await db.logDelivery(brief.id, "email", "sent").catch(() => {});
+        await db.updateDeliveredVia(brief.id, "email").catch(() => {});
+      }
       return "sent";
     } else {
-      await logDelivery(briefId, "email", "failed");
+      if (db && brief.id) {
+        await db.logDelivery(brief.id, "email", "failed").catch(() => {});
+      }
       return "failed";
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    await logDelivery(briefId, "email", "failed", message);
+    if (db && brief.id) {
+      await db.logDelivery(brief.id, "email", "failed", message).catch(() => {});
+    }
     return "failed";
   }
 }
 
 async function deliverDiscord(
-  briefId: string,
-  brief: Parameters<typeof sendBriefToDiscord>[0]
+  brief: Parameters<typeof sendBriefToDiscord>[0],
+  db: Awaited<ReturnType<typeof tryGetDbQueries>>
 ): Promise<string> {
   const botToken = process.env.DISCORD_BOT_TOKEN;
   const userId = process.env.DISCORD_USER_ID;
@@ -130,16 +156,22 @@ async function deliverDiscord(
     const success = await sendBriefToDiscord(brief);
 
     if (success) {
-      await logDelivery(briefId, "discord", "sent");
-      await updateDeliveredVia(briefId, "discord");
+      if (db && brief.id) {
+        await db.logDelivery(brief.id, "discord", "sent").catch(() => {});
+        await db.updateDeliveredVia(brief.id, "discord").catch(() => {});
+      }
       return "sent";
     } else {
-      await logDelivery(briefId, "discord", "failed");
+      if (db && brief.id) {
+        await db.logDelivery(brief.id, "discord", "failed").catch(() => {});
+      }
       return "failed";
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    await logDelivery(briefId, "discord", "failed", message);
+    if (db && brief.id) {
+      await db.logDelivery(brief.id, "discord", "failed", message).catch(() => {});
+    }
     return "failed";
   }
 }
