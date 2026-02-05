@@ -24,6 +24,9 @@ export async function generateBrief(
     "ECONOMIC",
     "TECHNOLOGY",
     "DOMESTIC",
+    "NAVAL",
+    "ASIA",
+    "OSINT",
   ];
 
   for (const category of categoriesToProcess) {

@@ -3,6 +3,7 @@ import { aggregateNews } from "@/lib/news/aggregator";
 import { getWeatherForecast } from "@/lib/weather/forecast";
 import { generateBrief } from "@/lib/ai/summarizer";
 import { saveBrief, getAllBriefs, getLatestBrief } from "@/lib/db/queries";
+import { sendBriefToDiscord } from "@/lib/delivery/discord";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -59,6 +60,13 @@ export async function POST(request: NextRequest) {
       rawNews: news,
       generatedAt: brief.generatedAt,
     });
+
+    // Send to Discord if configured
+    if (process.env.DISCORD_BOT_TOKEN && process.env.DISCORD_USER_ID) {
+      sendBriefToDiscord(saved).catch((err) =>
+        console.error("Discord delivery failed:", err)
+      );
+    }
 
     return NextResponse.json(saved, { status: 201 });
   } catch (error) {

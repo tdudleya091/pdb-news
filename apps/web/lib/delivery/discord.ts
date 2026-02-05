@@ -1,101 +1,132 @@
-import { Client, GatewayIntentBits, EmbedBuilder } from "discord.js";
 import { format } from "date-fns";
-import type { DailyBrief } from "../types";
+import type { DailyBrief, NewsCategory } from "../types";
 
-let discordClient: Client | null = null;
+const DISCORD_API = "https://discord.com/api/v10";
 
-async function getDiscordClient(): Promise<Client> {
-  if (discordClient?.isReady()) {
-    return discordClient;
-  }
+interface DiscordEmbed {
+  title?: string;
+  description?: string;
+  color?: number;
+  timestamp?: string;
+  fields?: { name: string; value: string; inline?: boolean }[];
+}
 
-  const token = process.env.DISCORD_BOT_TOKEN;
-  if (!token) {
-    throw new Error("DISCORD_BOT_TOKEN not configured");
-  }
-
-  discordClient = new Client({
-    intents: [GatewayIntentBits.DirectMessages],
+async function sendDM(
+  userId: string,
+  token: string,
+  embeds: DiscordEmbed[]
+): Promise<boolean> {
+  // Create DM channel
+  const channelRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bot ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ recipient_id: userId }),
   });
 
-  await discordClient.login(token);
+  if (!channelRes.ok) {
+    console.error("Failed to create DM channel:", await channelRes.text());
+    return false;
+  }
 
-  await new Promise<void>((resolve) => {
-    discordClient!.once("ready", () => resolve());
-  });
+  const channel = await channelRes.json();
 
-  return discordClient;
+  // Send message
+  const messageRes = await fetch(
+    `${DISCORD_API}/channels/${channel.id}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ embeds }),
+    }
+  );
+
+  if (!messageRes.ok) {
+    console.error("Failed to send message:", await messageRes.text());
+    return false;
+  }
+
+  return true;
 }
 
 export async function sendBriefToDiscord(brief: DailyBrief): Promise<boolean> {
+  const token = process.env.DISCORD_BOT_TOKEN;
   const userId = process.env.DISCORD_USER_ID;
-  if (!userId) {
-    console.error("DISCORD_USER_ID not configured");
+
+  if (!token || !userId) {
+    console.error("Discord not configured");
     return false;
   }
 
   try {
-    const client = await getDiscordClient();
-    const user = await client.users.fetch(userId);
-
     const dateStr = format(brief.date, "EEEE, MMMM d, yyyy");
     const weather = brief.weather;
 
-    const headerEmbed = new EmbedBuilder()
-      .setTitle("DAILY INTELLIGENCE BRIEF")
-      .setDescription(dateStr)
-      .setColor(0x1a365d)
-      .setTimestamp(brief.generatedAt);
-
-    const weatherEmbed = new EmbedBuilder()
-      .setTitle(`Weather - ${weather.location}`)
-      .setDescription(
-        `**${weather.current.tempF}°F / ${weather.current.tempC}°C**\n` +
+    // Header + Weather + Summary
+    const headerEmbeds: DiscordEmbed[] = [
+      {
+        title: "DAILY INTELLIGENCE BRIEF",
+        description: dateStr,
+        color: 0x1a365d,
+        timestamp: brief.generatedAt.toISOString(),
+      },
+      {
+        title: `Weather - ${weather.location}`,
+        description:
+          `**${weather.current.tempF}°F / ${weather.current.tempC}°C**\n` +
           `${capitalizeFirst(weather.current.condition)}\n` +
-          `Humidity: ${weather.current.humidity}% · Wind: ${weather.current.windMph} mph`
-      )
-      .setColor(0x667eea);
+          `Humidity: ${weather.current.humidity}% · Wind: ${weather.current.windMph} mph`,
+        color: 0x667eea,
+        fields:
+          weather.forecast.length > 0
+            ? [
+                {
+                  name: "Forecast",
+                  value: weather.forecast
+                    .slice(0, 3)
+                    .map(
+                      (day) =>
+                        `**${format(new Date(day.date), "EEE")}**: ${day.highF}°/${day.lowF}°F`
+                    )
+                    .join("\n"),
+                },
+              ]
+            : undefined,
+      },
+      {
+        title: "Executive Summary",
+        description: brief.executiveSummary,
+        color: 0x2d3748,
+      },
+    ];
 
-    if (weather.forecast.length > 0) {
-      const forecastText = weather.forecast
-        .slice(0, 3)
-        .map(
-          (day) =>
-            `**${format(new Date(day.date), "EEE")}**: ${day.highF}°/${day.lowF}°F (${day.highC}°/${day.lowC}°C)`
-        )
-        .join("\n");
-      weatherEmbed.addFields({ name: "Forecast", value: forecastText });
-    }
+    await sendDM(userId, token, headerEmbeds);
 
-    const summaryEmbed = new EmbedBuilder()
-      .setTitle("Executive Summary")
-      .setDescription(brief.executiveSummary)
-      .setColor(0x2d3748);
-
-    await user.send({ embeds: [headerEmbed, weatherEmbed, summaryEmbed] });
-
+    // Send each section
     for (const section of brief.sections) {
-      const sectionEmbed = new EmbedBuilder()
-        .setTitle(section.title)
-        .setColor(getCategoryColor(section.category));
+      const fields = section.items.slice(0, 3).map((item) => ({
+        name: item.headline,
+        value:
+          `${item.summary}\n` +
+          `*${item.significance}*\n` +
+          `\`${item.confidenceLevel}\` · ${item.sources.slice(0, 2).join(", ")}`,
+        inline: false,
+      }));
 
-      for (const item of section.items.slice(0, 3)) {
-        sectionEmbed.addFields({
-          name: item.headline,
-          value:
-            `${item.summary}\n` +
-            `*${item.significance}*\n` +
-            `\`${item.confidenceLevel}\` · ${item.sources.slice(0, 2).join(", ")}`,
-          inline: false,
-        });
-      }
+      const sectionEmbed: DiscordEmbed = {
+        title: section.title,
+        color: getCategoryColor(section.category),
+        fields,
+      };
 
-      await user.send({ embeds: [sectionEmbed] });
-
+      await sendDM(userId, token, [sectionEmbed]);
       await sleep(500);
     }
-
-    await user.send("Your daily intelligence brief is ready.");
 
     return true;
   } catch (error) {
@@ -108,7 +139,7 @@ function capitalizeFirst(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function getCategoryColor(category: string): number {
+function getCategoryColor(category: NewsCategory | string): number {
   const colors: Record<string, number> = {
     TOP_STORIES: 0xe53e3e,
     GEOPOLITICAL: 0x3182ce,
@@ -116,6 +147,9 @@ function getCategoryColor(category: string): number {
     TECHNOLOGY: 0x805ad5,
     DOMESTIC: 0xd69e2e,
     WATCHLIST: 0x718096,
+    NAVAL: 0x0077b6,
+    ASIA: 0xdc2f02,
+    OSINT: 0x6c757d,
   };
   return colors[category] || 0x1a365d;
 }
@@ -125,8 +159,5 @@ function sleep(ms: number): Promise<void> {
 }
 
 export async function disconnectDiscord(): Promise<void> {
-  if (discordClient) {
-    discordClient.destroy();
-    discordClient = null;
-  }
+  // No-op for REST API approach
 }
