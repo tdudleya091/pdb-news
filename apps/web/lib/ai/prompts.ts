@@ -10,8 +10,13 @@ ${newsContent}
 
 Generate a brief section with 3-5 key items. For each item provide:
 1. A concise headline (max 10 words)
-2. A 1-2 sentence summary focusing on facts
-3. A "significance" statement explaining why this matters (1 sentence)
+2. A detailed summary of 1-2 paragraphs minimum, up to 5 paragraphs maximum. IMPORTANT: Each paragraph MUST contain more than 4 sentences. Provide substantial context including:
+   - Background and historical context where relevant
+   - Key actors, their motivations, and relationships
+   - Specific facts, figures, dates, and locations
+   - Recent developments leading to this story
+   - Potential implications and what to watch for
+3. A "significance" statement explaining why this matters (1-2 sentences)
 4. Confidence level (HIGH/MEDIUM/LOW) based on source reliability and corroboration
 
 FORMAT: Return valid JSON matching this structure exactly:
