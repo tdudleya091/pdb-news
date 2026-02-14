@@ -61,4 +61,6 @@ Database schema is in `apps/web/lib/db/schema.ts` using Drizzle ORM.
 ### Environment Variables
 
 Required: `GROQ_API_KEY`, `DATABASE_URL`
-Optional: `RESEND_API_KEY`, `USER_EMAIL`, `DISCORD_BOT_TOKEN`, `DISCORD_USER_ID`, `OPENWEATHER_API_KEY`, `WEATHER_LOCATION`
+Optional: `RESEND_API_KEY`, `USER_EMAIL`, `DISCORD_BOT_TOKEN`, `DISCORD_USER_ID`
+
+Note: Weather uses the free weather.gov API (no key required), hardcoded for Sunnyvale, CA.
