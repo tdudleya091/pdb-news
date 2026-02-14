@@ -17,27 +17,42 @@ async function tryGetDbQueries() {
 }
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const runId = Math.random().toString(36).substring(2, 10);
+
+  const log = (level: string, message: string, data?: Record<string, unknown>) => {
+    const timestamp = new Date().toISOString();
+    const dataStr = data ? ` ${JSON.stringify(data)}` : "";
+    console.log(`[Cron ${level.toUpperCase()}] ${timestamp} [${runId}]: ${message}${dataStr}`);
+  };
+
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    log("warn", "Unauthorized cron request");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const results: Record<string, string> = {};
 
   try {
-    console.log("Starting daily brief generation...");
+    log("info", "Starting daily brief generation");
 
     const [news, weather] = await Promise.all([
       aggregateNews(),
       getWeatherForecast(),
     ]);
 
-    console.log(`Aggregated ${news.length} news items`);
+    log("info", "News and weather fetched", {
+      newsCount: news.length,
+      weatherLocation: weather.location,
+      weatherCondition: weather.current.condition
+    });
     results.newsCount = String(news.length);
 
     if (news.length === 0) {
+      log("error", "No news items found");
       return NextResponse.json(
         { error: "No news items found", results },
         { status: 500 }
@@ -45,7 +60,10 @@ export async function GET(request: NextRequest) {
     }
 
     const brief = await generateBrief(news, weather);
-    console.log("Brief generated successfully");
+    log("info", "Brief generated", {
+      sectionsCount: brief.sections.length,
+      summaryLength: brief.executiveSummary.length
+    });
 
     // Try to save to database (optional)
     let savedBrief = brief;
@@ -71,10 +89,22 @@ export async function GET(request: NextRequest) {
       results.database = "unavailable";
     }
 
+    log("info", "Starting delivery", {
+      emailConfigured: !!process.env.USER_EMAIL,
+      discordConfigured: !!(process.env.DISCORD_BOT_TOKEN && process.env.DISCORD_USER_ID)
+    });
+
     const deliveryResults = await Promise.allSettled([
       deliverEmail(savedBrief, db),
       deliverDiscord(savedBrief, db),
     ]);
+
+    log("info", "Delivery completed", {
+      emailStatus: deliveryResults[0].status,
+      emailResult: deliveryResults[0].status === "fulfilled" ? deliveryResults[0].value : "rejected",
+      discordStatus: deliveryResults[1].status,
+      discordResult: deliveryResults[1].status === "fulfilled" ? deliveryResults[1].value : "rejected"
+    });
 
     results.email =
       deliveryResults[0].status === "fulfilled"
@@ -85,20 +115,38 @@ export async function GET(request: NextRequest) {
         ? deliveryResults[1].value
         : "failed";
 
-    console.log("Daily brief completed:", results);
+    const duration = Date.now() - startTime;
+    log("info", "Daily brief completed", {
+      ...results,
+      durationMs: duration
+    });
 
     return NextResponse.json({
       success: true,
       briefId: results.briefId || brief.id,
       results,
+      runId,
+      durationMs: duration,
     });
   } catch (error) {
-    console.error("Cron job failed:", error);
+    const duration = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    log("error", "Cron job failed", {
+      error: errorMessage,
+      stack: errorStack,
+      durationMs: duration,
+      results
+    });
+
     return NextResponse.json(
       {
         error: "Failed to generate daily brief",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: errorMessage,
         results,
+        runId,
+        durationMs: duration,
       },
       { status: 500 }
     );
