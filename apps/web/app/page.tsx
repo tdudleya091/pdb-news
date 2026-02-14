@@ -1,10 +1,19 @@
-import { getLatestBrief } from "@/lib/db/queries";
 import { BriefView } from "@/components/BriefView";
 
 export const dynamic = "force-dynamic";
 
+async function tryGetLatestBrief() {
+  try {
+    const { getLatestBrief } = await import("@/lib/db/queries");
+    return await getLatestBrief();
+  } catch (error) {
+    console.error("Failed to fetch brief from database:", error);
+    return null;
+  }
+}
+
 export default async function HomePage() {
-  const brief = await getLatestBrief();
+  const brief = await tryGetLatestBrief();
 
   if (!brief) {
     return (
