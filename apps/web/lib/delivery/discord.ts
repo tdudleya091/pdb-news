@@ -333,7 +333,8 @@ function getCategoryColor(category: NewsCategory | string): number {
   const colors: Record<string, number> = {
     TOP_STORIES: 0xe53e3e,
     GEOPOLITICAL: 0x3182ce,
-    ECONOMIC: 0x38a169,
+    ECONOMIC: 0x38a169,    // Green - Economic Development
+    MARKETS: 0x00d26a,     // Bright Green - Market Wires
     TECHNOLOGY: 0x805ad5,
     DOMESTIC: 0xd69e2e,
     WATCHLIST: 0x718096,

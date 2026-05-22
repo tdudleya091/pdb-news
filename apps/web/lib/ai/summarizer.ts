@@ -22,6 +22,7 @@ export async function generateBrief(
     "TOP_STORIES",
     "GEOPOLITICAL",
     "ECONOMIC",
+    "MARKETS",
     "TECHNOLOGY",
     "DOMESTIC",
     "NAVAL",

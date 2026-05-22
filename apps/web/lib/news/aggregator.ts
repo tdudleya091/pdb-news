@@ -99,6 +99,7 @@ export function groupNewsByCategory(
     TOP_STORIES: [],
     GEOPOLITICAL: [],
     ECONOMIC: [],
+    MARKETS: [],
     TECHNOLOGY: [],
     DOMESTIC: [],
     WATCHLIST: [],

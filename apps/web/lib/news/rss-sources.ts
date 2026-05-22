@@ -3,30 +3,50 @@ import type { NewsCategory } from "../types";
 export const RSS_FEEDS: Record<NewsCategory, string[]> = {
   TOP_STORIES: [
     "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
-    "https://feeds.washingtonpost.com/rss/national",
     "https://feeds.bbci.co.uk/news/world/rss.xml",
     "https://www.theguardian.com/world/rss",
     "https://feeds.npr.org/1001/rss.xml",
-    "https://feeds.reuters.com/reuters/topNews",
-    "https://rsshub.app/apnews/topics/apf-topnews",
-    "https://www.politico.com/rss/politicotoday.xml",
     "https://www.politico.eu/feed/",
   ],
   GEOPOLITICAL: [
     "https://feeds.bbci.co.uk/news/world/rss.xml",
     "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
     "https://www.aljazeera.com/xml/rss/all.xml",
-    "https://feeds.washingtonpost.com/rss/world",
-    "https://feeds.reuters.com/reuters/worldNews",
-    "https://rsshub.app/apnews/topics/apf-intlnews",
     "https://www.politico.eu/feed/",
-    "https://www.understandingwar.org/feed",
+    "https://foreignpolicy.com/feed/",
   ],
   ECONOMIC: [
+    // Wire Services - Economic Development Focus
     "https://feeds.content.dowjones.io/public/rss/mw_topstories",
+    "https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines",
     "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+    "https://rss.nytimes.com/services/xml/rss/nyt/Economy.xml",
     "https://feeds.bbci.co.uk/news/business/rss.xml",
-    "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+    // Economic Development & Policy
+    "https://www.ft.com/rss/home",
+    "https://feeds.bloomberg.com/economics/news.rss",
+    // Development Banks & Institutions
+    "https://www.adb.org/news/feed",
+    "https://blogs.worldbank.org/feed",
+    // Trade Publications
+    "https://www.spglobal.com/marketintelligence/en/rss-feed/articles",
+  ],
+  MARKETS: [
+    // Wire Services - Market Coverage
+    "https://feeds.content.dowjones.io/public/rss/mw_marketpulse",
+    "https://feeds.content.dowjones.io/public/rss/mw_bulletins",
+    // Regional Markets
+    "https://feeds.bloomberg.com/markets/news.rss",
+    "https://www.ft.com/markets?format=rss",
+    // Market Data & Analysis
+    "https://www.investing.com/rss/news.rss",
+    "https://seekingalpha.com/market_currents.xml",
+    "https://finance.yahoo.com/rss/topstories",
+    // Regional Wire Coverage - Asia
+    "https://asia.nikkei.com/rss/feed/nar",
+    "https://economictimes.indiatimes.com/rssfeedsdefault.cms",
+    // Europe Markets
+    "https://www.ft.com/companies/europe?format=rss",
   ],
   TECHNOLOGY: [
     "https://feeds.arstechnica.com/arstechnica/technology-lab",
@@ -37,11 +57,8 @@ export const RSS_FEEDS: Record<NewsCategory, string[]> = {
   ],
   DOMESTIC: [
     "https://rss.nytimes.com/services/xml/rss/nyt/US.xml",
-    "https://feeds.washingtonpost.com/rss/politics",
     "https://feeds.npr.org/1014/rss.xml",
-    "https://feeds.reuters.com/Reuters/domesticNews",
-    "https://rsshub.app/apnews/topics/apf-usnews",
-    "https://www.politico.com/rss/politics08.xml",
+    "https://thehill.com/feed/",
   ],
   WATCHLIST: [],
   NAVAL: [
@@ -57,11 +74,9 @@ export const RSS_FEEDS: Record<NewsCategory, string[]> = {
     "https://en.yna.co.kr/RSS/news.xml",
     "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml",
     "https://asia.nikkei.com/rss/feed/nar",
-    "https://mainichi.jp/english/rss/etc/top.rss",
     "https://www3.nhk.or.jp/rss/news/cat0.xml",
     "https://www.japantimes.co.jp/feed/",
-    "https://english.kyodonews.net/rss/all.xml",
-    "https://www.asahi.com/ajw/rss/rss.rdf",
+    "https://www.scmp.com/rss/91/feed",
   ],
   OSINT: [
     "https://www.bellingcat.com/feed/",
@@ -69,6 +84,6 @@ export const RSS_FEEDS: Record<NewsCategory, string[]> = {
     "https://www.defenseone.com/rss/all/",
     "https://www.sandboxx.us/feed/",
     "https://warontherocks.com/feed/",
-    "https://www.understandingwar.org/feed",
+    "https://www.criticalthreats.org/feed",
   ],
 };

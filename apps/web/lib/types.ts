@@ -11,6 +11,7 @@ export type NewsCategory =
   | "TOP_STORIES"
   | "GEOPOLITICAL"
   | "ECONOMIC"
+  | "MARKETS"
   | "TECHNOLOGY"
   | "DOMESTIC"
   | "WATCHLIST"
@@ -64,7 +65,8 @@ export interface BriefItem {
 export const CATEGORY_TITLES: Record<NewsCategory, string> = {
   TOP_STORIES: "Top Stories",
   GEOPOLITICAL: "Geopolitical Affairs",
-  ECONOMIC: "Economic & Markets",
+  ECONOMIC: "Economic Development",
+  MARKETS: "Market Wire Coverage",
   TECHNOLOGY: "Technology",
   DOMESTIC: "Domestic Affairs",
   WATCHLIST: "Watchlist",
