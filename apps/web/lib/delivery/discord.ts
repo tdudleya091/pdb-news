@@ -267,14 +267,23 @@ export async function sendBriefToDiscord(brief: DailyBrief): Promise<boolean> {
 
     for (let i = 0; i < brief.sections.length; i++) {
       const section = brief.sections[i];
-      const fields = section.items.slice(0, 3).map((item) => ({
-        name: item.headline,
-        value:
-          `${item.summary}\n` +
-          `*${item.significance}*\n` +
-          `\`${item.confidenceLevel}\` · ${item.sources.slice(0, 2).join(", ")}`,
-        inline: false,
-      }));
+      const fields = section.items.slice(0, 3).map((item) => {
+        const sources = item.sources.slice(0, 2).map(s =>
+          s.length > 50 ? s.replace(/^https?:\/\//, '').split('/')[0] : s
+        ).join(", ");
+        let value = `${item.summary}\n*${item.significance}*\n\`${item.confidenceLevel}\` · ${sources}`;
+        // Discord field value limit is 1024 chars
+        if (value.length > 1024) {
+          const suffix = `...\n*${item.significance.slice(0, 100)}*\n\`${item.confidenceLevel}\` · ${sources}`;
+          const maxSummary = 1024 - suffix.length;
+          value = item.summary.slice(0, maxSummary) + suffix;
+        }
+        return {
+          name: item.headline.slice(0, 256), // Discord field name limit
+          value,
+          inline: false,
+        };
+      });
 
       const sectionEmbed: DiscordEmbed = {
         title: section.title,
