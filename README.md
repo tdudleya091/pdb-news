@@ -63,7 +63,6 @@ npx drizzle-kit push
 npm run dev
 ```
 
-Visit http://localhost:3000
 
 ## CLI Usage
 
